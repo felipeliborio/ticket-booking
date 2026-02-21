@@ -1,0 +1,7 @@
+services:
+  database:
+    container_name: "ticket-booking-dev-db"
+    image: "postgres:16-alpine"
+    env_file: ../.env.development
+    ports:
+      - "54321:5432"
