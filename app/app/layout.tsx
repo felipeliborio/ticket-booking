@@ -29,12 +29,18 @@ export default function RootLayout({
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
         <header className="fixed top-0 left-0 z-10 w-full border-b border-white/60 bg-white/55 backdrop-blur">
-          <div className="mx-auto flex w-full max-w-5xl items-center px-6 py-3">
+          <div className="mx-auto flex w-full max-w-5xl items-center justify-between px-6 py-3">
             <Link
               href="/"
               className="text-sm font-semibold tracking-wide text-zinc-700 transition-colors hover:text-zinc-900"
             >
               Ticket booking
+            </Link>
+            <Link
+              href="/bookings"
+              className="text-sm font-medium text-zinc-600 transition-colors hover:text-zinc-900"
+            >
+              My bookings
             </Link>
           </div>
         </header>
