@@ -48,7 +48,28 @@ export default function RootLayout({
             </div>
           </div>
         </header>
-        <div className="pt-14">{children}</div>
+        <div className="min-h-screen pt-14">
+          {children}
+          <footer className="mt-16 border-t border-white/60 bg-white/55">
+            <div className="mx-auto flex w-full max-w-6xl items-center justify-between px-6 py-4 text-xs text-zinc-600">
+              <div className="space-y-1">
+                <p>Ticket booking system</p>
+                <p>Built for events and bookings</p>
+              </div>
+              <div className="space-y-1 text-right">
+                <p>Built by Felipe Libório</p>
+                <a
+                  href="https://github.com/felipeliborio/ticket-booking"
+                  target="_blank"
+                  rel="noreferrer"
+                  className="font-medium text-zinc-700 transition-colors hover:text-zinc-900"
+                >
+                  github.com/felipeliborio/ticket-booking
+                </a>
+              </div>
+            </div>
+          </footer>
+        </div>
       </body>
     </html>
   );
