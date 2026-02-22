@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import Link from "next/link";
+import { SwitchUserButton } from "@/app/components/switch-user-button";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -36,12 +37,15 @@ export default function RootLayout({
             >
               Ticket booking
             </Link>
-            <Link
-              href="/bookings"
-              className="text-sm font-medium text-zinc-600 transition-colors hover:text-zinc-900"
-            >
-              My bookings
-            </Link>
+            <div className="flex items-center gap-3">
+              <Link
+                href="/bookings"
+                className="text-sm font-medium text-zinc-600 transition-colors hover:text-zinc-900"
+              >
+                My bookings
+              </Link>
+              <SwitchUserButton />
+            </div>
           </div>
         </header>
         {children}

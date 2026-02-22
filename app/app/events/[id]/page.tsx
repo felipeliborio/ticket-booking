@@ -1,6 +1,7 @@
 "use client";
 
 import type { EventAvailability, EventItem } from "@/lib/events";
+import { USER_ID_STORAGE_KEY } from "@/lib/user";
 import { useCallback, useEffect, useState } from "react";
 
 type EventDetailsPageProps = {
@@ -44,7 +45,6 @@ type ListBookingsResponse = {
   found: number;
 };
 
-const USER_ID_STORAGE_KEY = "ticket-booking-user-id";
 const BOOKING_PAYMENT_WINDOW_MS = 5 * 60 * 1000;
 
 function formatEventDate(value: string): string {
