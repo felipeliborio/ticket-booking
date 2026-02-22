@@ -9,16 +9,16 @@ export const database = {
 
 export default database;
 
-const CLIENT_PARAMS = {
-  user: process.env.POSTGRES_USER,
-  host: process.env.POSTGRES_HOST,
-  database: process.env.POSTGRES_DB,
-  password: process.env.POSTGRES_PASSWORD,
-  port: Number.parseInt(process.env.POSTGRES_PORT ?? "5432"),
-  ssl: process.env.POSTGRES_SSL === "true",
-};
-
 export async function getNewClient(): Promise<Client> {
+  const CLIENT_PARAMS = {
+    user: process.env.POSTGRES_USER,
+    host: process.env.POSTGRES_HOST,
+    database: process.env.POSTGRES_DB,
+    password: process.env.POSTGRES_PASSWORD,
+    port: Number.parseInt(process.env.POSTGRES_PORT ?? "5432"),
+    ssl: process.env.POSTGRES_SSL === "true",
+  };
+
   const client = new Client(CLIENT_PARAMS);
   await client.connect();
   return client;

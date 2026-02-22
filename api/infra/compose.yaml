@@ -4,4 +4,4 @@ services:
     image: "postgres:16-alpine"
     env_file: ../.env.development
     ports:
-      - "54321:5432"
+      - "55000:5432"
