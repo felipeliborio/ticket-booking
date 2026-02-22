@@ -4,6 +4,21 @@ import { BookingInsertRow, BookingListRow } from "src/bookings/bookings.types";
 
 @Injectable()
 export class BookingsRepository {
+  async failExpiredPendingBookings(): Promise<number> {
+    const queryResult = await database.query({
+      text: `
+        UPDATE booking
+        SET
+          status = 'failure'::booking_status,
+          updated_at = now()
+        WHERE status = 'pending'::booking_status
+          AND created_at <= now() - interval '5 minutes';
+      `,
+    });
+
+    return queryResult.rowCount ?? 0;
+  }
+
   async findByExternalId(
     externalId: string,
   ): Promise<BookingInsertRow | undefined> {
@@ -90,34 +105,51 @@ export class BookingsRepository {
           WHERE ($3 + cr.vip_reserved) <= el.venue_vip_seats
             AND ($4 + cr.first_row_reserved) <= el.venue_first_row_seats
             AND ($5 + cr.ga_reserved) <= el.venue_ga_seats
-        )
-        INSERT INTO booking (
-          external_id,
-          event_id,
-          vip_seats,
-          first_row_seats,
-          ga_seats,
-          app_user_id,
-          status
+        ),
+        inserted_booking AS (
+          INSERT INTO booking (
+            external_id,
+            event_id,
+            vip_seats,
+            first_row_seats,
+            ga_seats,
+            app_user_id,
+            status
+          )
+          SELECT
+            $1,
+            $2,
+            $3,
+            $4,
+            $5,
+            $6,
+            'pending'::booking_status
+          FROM can_book
+          ON CONFLICT (external_id) DO NOTHING
+          RETURNING
+            id,
+            external_id,
+            status,
+            vip_seats,
+            first_row_seats,
+            ga_seats,
+            created_at,
+            updated_at
+        ),
+        inserted_payment AS (
+          INSERT INTO payment (booking_id, status)
+          SELECT id, 'pending'::payment_status
+          FROM inserted_booking
         )
         SELECT
-          $1,
-          $2,
-          $3,
-          $4,
-          $5,
-          $6,
-          'pending'::booking_status
-        FROM can_book
-        ON CONFLICT (external_id) DO NOTHING
-        RETURNING
           external_id,
           status,
           vip_seats,
           first_row_seats,
           ga_seats,
           created_at,
-          updated_at;
+          updated_at
+        FROM inserted_booking;
       `,
       values: [
         input.bookingExternalId,

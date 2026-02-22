@@ -36,6 +36,10 @@ export class BookingsService {
     };
   }
 
+  async failExpiredPendingBookings(): Promise<number> {
+    return this.bookingsRepository.failExpiredPendingBookings();
+  }
+
   async create(input: CreateBookingDto): Promise<CreateBookingResponseDto> {
     this.assertUuid(input.userId, "userId");
     this.assertUuid(input.bookingId, "bookingId");
