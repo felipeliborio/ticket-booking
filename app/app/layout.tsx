@@ -29,8 +29,8 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
-        <header className="fixed top-0 left-0 z-10 w-full border-b border-white/60 bg-white/55 backdrop-blur">
-          <div className="mx-auto flex w-full max-w-5xl items-center justify-between px-6 py-3">
+        <header className="fixed top-0 left-0 z-10 h-14 w-full border-b border-white/60 bg-white/55 backdrop-blur">
+          <div className="mx-auto flex h-full w-full max-w-5xl items-center justify-between px-6">
             <Link
               href="/"
               className="text-sm font-semibold tracking-wide text-zinc-700 transition-colors hover:text-zinc-900"
@@ -48,7 +48,7 @@ export default function RootLayout({
             </div>
           </div>
         </header>
-        {children}
+        <div className="pt-14">{children}</div>
       </body>
     </html>
   );

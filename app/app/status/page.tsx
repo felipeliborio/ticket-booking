@@ -48,7 +48,7 @@ export default function StatusPage() {
   }, []);
 
   return (
-    <main className="flex min-h-screen items-center justify-center bg-gradient-to-r from-blue-50 via-white to-red-50 px-6">
+    <main className="flex min-h-screen items-center justify-center bg-linear-to-r from-blue-50 via-white to-red-50 px-6">
       <section className="w-full max-w-2xl rounded-3xl border border-white/70 bg-white/80 p-10 shadow-xl backdrop-blur">
         <header className="mb-8 space-y-2 text-center">
           <h1 className="text-4xl font-semibold tracking-tight text-zinc-700">

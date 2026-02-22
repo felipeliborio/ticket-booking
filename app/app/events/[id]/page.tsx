@@ -460,8 +460,8 @@ export default function EventDetailsPage({ params }: EventDetailsPageProps) {
   };
 
   return (
-    <main className="min-h-screen bg-gradient-to-r from-blue-50 via-white to-red-50 px-6 py-12">
-      <section className="mx-auto w-full max-w-4xl">
+    <main className="min-h-screen bg-linear-to-r from-blue-50 via-white to-red-50 px-6 py-12">
+      <section className="mx-auto w-full max-w-6xl">
         {loading ? (
           <div className="rounded-2xl border border-white/70 bg-white/85 p-10 text-center text-zinc-600 shadow-md backdrop-blur">
             Loading event details...

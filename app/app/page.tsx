@@ -154,7 +154,7 @@ export default function Home() {
   };
 
   return (
-    <main className="min-h-screen bg-gradient-to-r from-blue-50 via-white to-red-50 px-6 py-12">
+    <main className="min-h-screen bg-linear-to-r from-blue-50 via-white to-red-50 px-6 py-12">
       <section className="mx-auto w-full max-w-6xl">
         <header className="mb-8">
           <h1 className="text-4xl font-semibold tracking-tight text-zinc-700">
