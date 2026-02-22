@@ -2,13 +2,19 @@ import { BadRequestException, NotFoundException } from "@nestjs/common";
 import { Test, TestingModule } from "@nestjs/testing";
 import { EventsRepository } from "src/events/events.repository";
 import { EventsService } from "src/events/events.service";
-import { EventDatabaseRow } from "src/events/events.types";
+import {
+  EventAvailabilityRow,
+  EventDatabaseRow,
+} from "src/events/events.types";
 
 describe("EventsService", () => {
   let service: EventsService;
   let eventsRepository: {
     findAll: jest.Mock<Promise<EventDatabaseRow[]>>;
     findByExternalId: jest.Mock<Promise<EventDatabaseRow | undefined>>;
+    findAvailabilityByExternalId: jest.Mock<
+      Promise<EventAvailabilityRow | undefined>
+    >;
   };
 
   beforeEach(async () => {
@@ -16,6 +22,9 @@ describe("EventsService", () => {
       findAll: jest.fn() as unknown as jest.Mock<Promise<EventDatabaseRow[]>>,
       findByExternalId: jest.fn() as unknown as jest.Mock<
         Promise<EventDatabaseRow | undefined>
+      >,
+      findAvailabilityByExternalId: jest.fn() as unknown as jest.Mock<
+        Promise<EventAvailabilityRow | undefined>
       >,
     };
 
@@ -137,6 +146,41 @@ describe("EventsService", () => {
       id: "5e67ec2d-35a0-408e-9f35-f6f3fd7e78cb",
       name: "Venue 1",
     });
+  });
+
+  it("should return event availability", async () => {
+    eventsRepository.findAvailabilityByExternalId.mockResolvedValue({
+      event_external_id: "f3264df9-d6e4-4f41-b865-faf8e0f8c2a4",
+      vip_available: 120,
+      first_row_available: 240,
+      ga_available: 3600,
+      total_available: 3960,
+    });
+
+    const response = await service.findAvailability(
+      "f3264df9-d6e4-4f41-b865-faf8e0f8c2a4",
+    );
+
+    expect(eventsRepository.findAvailabilityByExternalId).toHaveBeenCalledWith(
+      "f3264df9-d6e4-4f41-b865-faf8e0f8c2a4",
+    );
+    expect(response).toEqual({
+      id: "f3264df9-d6e4-4f41-b865-faf8e0f8c2a4",
+      availableTickets: {
+        vip: 120,
+        firstRow: 240,
+        ga: 3600,
+        total: 3960,
+      },
+    });
+  });
+
+  it("should throw when event availability is not found", async () => {
+    eventsRepository.findAvailabilityByExternalId.mockResolvedValue(undefined);
+
+    await expect(
+      service.findAvailability("f3264df9-d6e4-4f41-b865-faf8e0f8c2a4"),
+    ).rejects.toBeInstanceOf(NotFoundException);
   });
 
   it("should throw when event is not found", async () => {

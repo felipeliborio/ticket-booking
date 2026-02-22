@@ -3,6 +3,7 @@ import {
   Injectable,
   NotFoundException,
 } from "@nestjs/common";
+import { EventAvailabilityResponseDto } from "src/events/dto/event-availability-response.dto";
 import { EventResponseDto } from "src/events/dto/event-response.dto";
 import { ListEventsQueryDto } from "src/events/dto/list-events-query.dto";
 import { ListEventsResponseDto } from "src/events/dto/list-events-response.dto";
@@ -49,6 +50,24 @@ export class EventsService {
     }
 
     return this.mapRowToResponse(row);
+  }
+
+  async findAvailability(id: string): Promise<EventAvailabilityResponseDto> {
+    const row = await this.eventsRepository.findAvailabilityByExternalId(id);
+
+    if (!row) {
+      throw new NotFoundException("Event not found.");
+    }
+
+    return {
+      id: row.event_external_id,
+      availableTickets: {
+        vip: row.vip_available,
+        firstRow: row.first_row_available,
+        ga: row.ga_available,
+        total: row.total_available,
+      },
+    };
   }
 
   private parseLimit(limitQuery?: string): number {

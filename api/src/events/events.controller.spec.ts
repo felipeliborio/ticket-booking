@@ -1,4 +1,5 @@
 import { Test, TestingModule } from "@nestjs/testing";
+import { EventAvailabilityResponseDto } from "src/events/dto/event-availability-response.dto";
 import { EventResponseDto } from "src/events/dto/event-response.dto";
 import { ListEventsResponseDto } from "src/events/dto/list-events-response.dto";
 import { EventsController } from "src/events/events.controller";
@@ -9,6 +10,7 @@ describe("EventsController", () => {
   let eventsService: {
     findAll: jest.Mock<Promise<ListEventsResponseDto>>;
     findOne: jest.Mock<Promise<EventResponseDto>>;
+    findAvailability: jest.Mock<Promise<EventAvailabilityResponseDto>>;
   };
 
   beforeEach(async () => {
@@ -17,6 +19,9 @@ describe("EventsController", () => {
         Promise<ListEventsResponseDto>
       >,
       findOne: jest.fn() as unknown as jest.Mock<Promise<EventResponseDto>>,
+      findAvailability: jest.fn() as unknown as jest.Mock<
+        Promise<EventAvailabilityResponseDto>
+      >,
     };
 
     const module: TestingModule = await Test.createTestingModule({
@@ -76,5 +81,26 @@ describe("EventsController", () => {
 
     expect(eventsService.findOne).toHaveBeenCalledWith(event.id);
     expect(response).toEqual(event);
+  });
+
+  it("should get event availability", async () => {
+    const availability: EventAvailabilityResponseDto = {
+      id: "f3264df9-d6e4-4f41-b865-faf8e0f8c2a4",
+      availableTickets: {
+        vip: 120,
+        firstRow: 240,
+        ga: 3600,
+        total: 3960,
+      },
+    };
+
+    eventsService.findAvailability.mockResolvedValue(availability);
+
+    const response = await controller.findAvailability(availability.id);
+
+    expect(eventsService.findAvailability).toHaveBeenCalledWith(
+      availability.id,
+    );
+    expect(response).toEqual(availability);
   });
 });

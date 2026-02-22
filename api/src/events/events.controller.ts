@@ -6,6 +6,7 @@ import {
   ApiParam,
   ApiQuery,
 } from "@nestjs/swagger";
+import { EventAvailabilityResponseDto } from "src/events/dto/event-availability-response.dto";
 import { EventResponseDto } from "src/events/dto/event-response.dto";
 import { ListEventsQueryDto } from "src/events/dto/list-events-query.dto";
 import { ListEventsResponseDto } from "src/events/dto/list-events-response.dto";
@@ -34,5 +35,16 @@ export class EventsController {
   @ApiNotFoundResponse({ description: "Event not found." })
   async findOne(@Param("id") id: string): Promise<EventResponseDto> {
     return this.eventsService.findOne(id);
+  }
+
+  @Get(":id/availability")
+  @ApiOperation({ summary: "Get event ticket availability" })
+  @ApiParam({ name: "id", format: "uuid" })
+  @ApiOkResponse({ type: EventAvailabilityResponseDto })
+  @ApiNotFoundResponse({ description: "Event not found." })
+  async findAvailability(
+    @Param("id") id: string,
+  ): Promise<EventAvailabilityResponseDto> {
+    return this.eventsService.findAvailability(id);
   }
 }

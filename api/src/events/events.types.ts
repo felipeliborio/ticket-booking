@@ -11,6 +11,14 @@ export interface EventDatabaseRow {
   updated_at: Date;
 }
 
+export interface EventAvailabilityRow {
+  event_external_id: string;
+  vip_available: number;
+  first_row_available: number;
+  ga_available: number;
+  total_available: number;
+}
+
 export interface FindAllEventsOptions {
   name?: string;
   limit: number;
