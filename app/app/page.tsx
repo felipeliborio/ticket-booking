@@ -1,6 +1,7 @@
 "use client";
 
 import type { EventItem, ListEventsResponse } from "@/lib/events";
+import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 
 const PAGE_SIZE = 12;
@@ -43,23 +44,25 @@ async function getEvents(options: {
 
 function EventCard({ event }: { event: EventItem }) {
   return (
-    <article className="rounded-2xl border border-white/70 bg-white/85 p-6 shadow-md backdrop-blur">
-      <p className="text-xs font-medium tracking-wide text-zinc-500 uppercase">
-        {event.venue.name}
-      </p>
-      <h2 className="mt-2 text-xl font-semibold tracking-tight text-zinc-800">
-        {event.name}
-      </h2>
-      <p className="mt-3 text-sm text-zinc-600">
-        {formatEventDate(event.eventDatetime)}
-      </p>
-      <div className="mt-6 flex items-center justify-between border-t border-zinc-200/70 pt-4 text-sm">
-        <span className="text-zinc-500">From</span>
-        <span className="font-semibold text-zinc-700">
-          ${event.gaPrice.toFixed(2)}
-        </span>
-      </div>
-    </article>
+    <Link href={`/events/${event.id}`} className="block">
+      <article className="rounded-2xl border border-white/70 bg-white/85 p-6 shadow-md backdrop-blur transition hover:-translate-y-0.5 hover:shadow-lg">
+        <p className="text-xs font-medium tracking-wide text-zinc-500 uppercase">
+          {event.venue.name}
+        </p>
+        <h2 className="mt-2 text-xl font-semibold tracking-tight text-zinc-800">
+          {event.name}
+        </h2>
+        <p className="mt-3 text-sm text-zinc-600">
+          {formatEventDate(event.eventDatetime)}
+        </p>
+        <div className="mt-6 flex items-center justify-between border-t border-zinc-200/70 pt-4 text-sm">
+          <span className="text-zinc-500">From</span>
+          <span className="font-semibold text-zinc-700">
+            ${event.gaPrice.toFixed(2)}
+          </span>
+        </div>
+      </article>
+    </Link>
   );
 }
 
@@ -100,7 +103,9 @@ export default function Home() {
       } catch (loadError) {
         if (!mounted) return;
         setError(
-          loadError instanceof Error ? loadError.message : "Failed to load events.",
+          loadError instanceof Error
+            ? loadError.message
+            : "Failed to load events.",
         );
       } finally {
         if (mounted) {
@@ -139,7 +144,9 @@ export default function Home() {
       setError(null);
     } catch (loadError) {
       setError(
-        loadError instanceof Error ? loadError.message : "Failed to load events.",
+        loadError instanceof Error
+          ? loadError.message
+          : "Failed to load events.",
       );
     } finally {
       setLoadingMore(false);
@@ -201,7 +208,9 @@ export default function Home() {
             </div>
 
             <div className="mt-8 flex items-center justify-between gap-4">
-              <p className="text-sm text-zinc-600">{events.length} events loaded</p>
+              <p className="text-sm text-zinc-600">
+                {events.length} events loaded
+              </p>
               <button
                 type="button"
                 onClick={() => {
@@ -210,7 +219,11 @@ export default function Home() {
                 disabled={!canLoadMore}
                 className="rounded-xl border border-zinc-300 bg-white px-4 py-2 text-sm font-medium text-zinc-700 shadow-sm transition hover:bg-zinc-50 disabled:cursor-not-allowed disabled:opacity-50"
               >
-                {loadingMore ? "Loading..." : hasMore ? "Load more" : "All loaded"}
+                {loadingMore
+                  ? "Loading..."
+                  : hasMore
+                    ? "Load more"
+                    : "All loaded"}
               </button>
             </div>
           </>

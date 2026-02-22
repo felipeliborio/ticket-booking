@@ -15,6 +15,16 @@ export interface EventItem {
   updatedAt: string;
 }
 
+export interface EventAvailability {
+  id: string;
+  availableTickets: {
+    vip: number;
+    firstRow: number;
+    ga: number;
+    total: number;
+  };
+}
+
 export interface ListEventsResponse {
   events: EventItem[];
   limit: number;
@@ -69,4 +79,32 @@ export async function fetchEvents(
   }
 
   return (await response.json()) as ListEventsResponse;
+}
+
+export async function fetchEventById(id: string): Promise<EventItem> {
+  const apiBaseUrl = getApiBaseUrl();
+  const response = await fetch(`${apiBaseUrl}/events/${id}`, {
+    cache: "no-store",
+  });
+
+  if (!response.ok) {
+    throw new Error(`Event request failed with ${response.status}.`);
+  }
+
+  return (await response.json()) as EventItem;
+}
+
+export async function fetchEventAvailability(
+  id: string,
+): Promise<EventAvailability> {
+  const apiBaseUrl = getApiBaseUrl();
+  const response = await fetch(`${apiBaseUrl}/events/${id}/availability`, {
+    cache: "no-store",
+  });
+
+  if (!response.ok) {
+    throw new Error(`Event availability request failed with ${response.status}.`);
+  }
+
+  return (await response.json()) as EventAvailability;
 }
