@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { USER_ID_STORAGE_KEY } from "@/lib/user";
 
 type BookingItem = {
   id: string;
@@ -33,11 +34,21 @@ type PayBookingResponse = {
   updatedAt: string;
 };
 
-const USER_ID_STORAGE_KEY = "ticket-booking-user-id";
 const BOOKING_PAYMENT_WINDOW_MS = 5 * 60 * 1000;
 
 function getUserId(): string | null {
   return window.localStorage.getItem(USER_ID_STORAGE_KEY);
+}
+
+function getOrCreateUserId(): string {
+  const currentValue = getUserId();
+  if (currentValue) {
+    return currentValue;
+  }
+
+  const nextValue = crypto.randomUUID();
+  window.localStorage.setItem(USER_ID_STORAGE_KEY, nextValue);
+  return nextValue;
 }
 
 function formatDate(value: string): string {
@@ -76,14 +87,7 @@ export default function BookingsPage() {
     let mounted = true;
 
     const loadBookings = async () => {
-      const userId = getUserId();
-
-      if (!userId) {
-        if (!mounted) return;
-        setError("No user found yet. Create a booking first.");
-        setLoading(false);
-        return;
-      }
+      const userId = getOrCreateUserId();
 
       try {
         const response = await fetch(
@@ -238,8 +242,10 @@ export default function BookingsPage() {
         ) : null}
 
         {!loading && !error && bookings.length === 0 ? (
-          <div className="rounded-2xl border border-white/70 bg-white/85 p-10 text-center text-zinc-600 shadow-md backdrop-blur">
-            No bookings yet.
+          <div className="flex min-h-[50vh] items-center justify-center text-center">
+            <p className="text-4xl font-semibold tracking-tight text-zinc-500">
+              No bookings yet.
+            </p>
           </div>
         ) : null}
 
