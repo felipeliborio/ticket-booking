@@ -1,5 +1,19 @@
 import { ApiProperty } from "@nestjs/swagger";
 
+class BookingEventDto {
+  @ApiProperty({ format: "uuid" })
+  id!: string;
+
+  @ApiProperty({ example: "Rock in Rio - Day 1" })
+  name!: string;
+
+  @ApiProperty({ format: "date-time" })
+  eventDatetime!: string;
+
+  @ApiProperty({ example: "Allianz Parque" })
+  venueName!: string;
+}
+
 class BookedSeatsDto {
   @ApiProperty({ example: 2 })
   vip!: number;
@@ -18,8 +32,8 @@ export class BookingResponseDto {
   @ApiProperty({ format: "uuid" })
   id!: string;
 
-  @ApiProperty({ format: "uuid" })
-  eventId!: string;
+  @ApiProperty({ type: BookingEventDto })
+  event!: BookingEventDto;
 
   @ApiProperty({ enum: ["pending", "success", "failure"] })
   status!: "pending" | "success" | "failure";
@@ -32,4 +46,7 @@ export class BookingResponseDto {
 
   @ApiProperty({ format: "date-time" })
   updatedAt!: string;
+
+  @ApiProperty({ example: 1234.5 })
+  totalCost!: number;
 }

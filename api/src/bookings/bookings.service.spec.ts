@@ -85,10 +85,14 @@ describe("BookingsService", () => {
       {
         external_id: "9dbc5a98-dcda-4e49-9628-52fef26e6482",
         event_external_id: "00000000-0000-4000-8000-0000000003e9",
+        event_name: "Rock in Rio - Day 1",
+        event_datetime: new Date("2026-03-10T20:00:00.000Z"),
+        venue_name: "Allianz Parque",
         status: "pending",
         vip_seats: 2,
         first_row_seats: 0,
         ga_seats: 3,
+        total_cost: "540.0000",
         created_at: new Date("2026-02-22T00:00:00.000Z"),
         updated_at: new Date("2026-02-22T00:00:00.000Z"),
       },
@@ -102,7 +106,12 @@ describe("BookingsService", () => {
     expect(response.found).toBe(1);
     expect(response.bookings[0]).toEqual({
       id: "9dbc5a98-dcda-4e49-9628-52fef26e6482",
-      eventId: "00000000-0000-4000-8000-0000000003e9",
+      event: {
+        id: "00000000-0000-4000-8000-0000000003e9",
+        name: "Rock in Rio - Day 1",
+        eventDatetime: "2026-03-10T20:00:00.000Z",
+        venueName: "Allianz Parque",
+      },
       status: "pending",
       bookedSeats: {
         vip: 2,
@@ -112,6 +121,7 @@ describe("BookingsService", () => {
       },
       createdAt: "2026-02-22T00:00:00.000Z",
       updatedAt: "2026-02-22T00:00:00.000Z",
+      totalCost: 540,
     });
   });
 

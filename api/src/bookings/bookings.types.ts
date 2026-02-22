@@ -10,4 +10,8 @@ export interface BookingInsertRow {
 
 export interface BookingListRow extends BookingInsertRow {
   event_external_id: string;
+  event_name: string;
+  event_datetime: Date;
+  venue_name: string;
+  total_cost: string | number;
 }

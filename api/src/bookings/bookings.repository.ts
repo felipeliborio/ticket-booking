@@ -50,15 +50,24 @@ export class BookingsRepository {
         SELECT
           b.external_id,
           e.external_id AS event_external_id,
+          e.name AS event_name,
+          e.event_datetime,
+          v.name AS venue_name,
           b.status,
           b.vip_seats,
           b.first_row_seats,
           b.ga_seats,
+          (
+            (b.vip_seats * e.vip_price)
+            + (b.first_row_seats * e.first_row_price)
+            + (b.ga_seats * e.ga_price)
+          ) AS total_cost,
           b.created_at,
           b.updated_at
         FROM booking b
         INNER JOIN app_user u ON u.id = b.app_user_id
         INNER JOIN event e ON e.id = b.event_id
+        INNER JOIN venue v ON v.id = e.venue_id
         WHERE u.external_id = $1
         ORDER BY b.created_at DESC, b.id DESC;
       `,

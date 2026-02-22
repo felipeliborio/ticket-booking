@@ -107,16 +107,25 @@ export class BookingsService {
   private mapRowToResponse(row: {
     external_id: string;
     event_external_id: string;
+    event_name: string;
+    event_datetime: Date;
+    venue_name: string;
     status: "pending" | "success" | "failure";
     vip_seats: number;
     first_row_seats: number;
     ga_seats: number;
+    total_cost: number | string;
     created_at: Date;
     updated_at: Date;
   }): BookingResponseDto {
     return {
       id: row.external_id,
-      eventId: row.event_external_id,
+      event: {
+        id: row.event_external_id,
+        name: row.event_name,
+        eventDatetime: row.event_datetime.toISOString(),
+        venueName: row.venue_name,
+      },
       status: row.status,
       bookedSeats: {
         vip: row.vip_seats,
@@ -126,6 +135,7 @@ export class BookingsService {
       },
       createdAt: row.created_at.toISOString(),
       updatedAt: row.updated_at.toISOString(),
+      totalCost: Number(row.total_cost),
     };
   }
 
