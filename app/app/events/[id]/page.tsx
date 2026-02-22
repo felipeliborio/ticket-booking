@@ -1,7 +1,7 @@
 "use client";
 
 import type { EventAvailability, EventItem } from "@/lib/events";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 
 type EventDetailsPageProps = {
   params: Promise<{ id: string }>;
@@ -20,7 +20,32 @@ type CreateBookingResponse = {
   updatedAt: string;
 };
 
+type PayBookingResponse = {
+  bookingId: string;
+  status: "success" | "failure";
+  updatedAt: string;
+};
+
+type BookingItem = {
+  id: string;
+  status: "pending" | "success" | "failure";
+  bookedSeats: {
+    vip: number;
+    firstRow: number;
+    ga: number;
+    total: number;
+  };
+  createdAt: string;
+  updatedAt: string;
+};
+
+type ListBookingsResponse = {
+  bookings: BookingItem[];
+  found: number;
+};
+
 const USER_ID_STORAGE_KEY = "ticket-booking-user-id";
+const BOOKING_PAYMENT_WINDOW_MS = 5 * 60 * 1000;
 
 function formatEventDate(value: string): string {
   return new Intl.DateTimeFormat("en-US", {
@@ -34,6 +59,14 @@ function formatEventDate(value: string): string {
 
 function formatPrice(value: number): string {
   return `$${value.toFixed(2)}`;
+}
+
+function formatCountdown(totalSeconds: number): string {
+  const safeSeconds = Math.max(0, totalSeconds);
+  const minutes = Math.floor(safeSeconds / 60);
+  const seconds = safeSeconds % 60;
+
+  return `${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
 }
 
 function getOrCreateUserId(): string {
@@ -90,6 +123,12 @@ export default function EventDetailsPage({ params }: EventDetailsPageProps) {
   const [bookingError, setBookingError] = useState<string | null>(null);
   const [bookingResult, setBookingResult] =
     useState<CreateBookingResponse | null>(null);
+  const [paymentSubmitting, setPaymentSubmitting] = useState(false);
+  const [paymentError, setPaymentError] = useState<string | null>(null);
+  const [countdownNowMs, setCountdownNowMs] = useState(() => Date.now());
+  const [countdownStatusSyncDoneFor, setCountdownStatusSyncDoneFor] = useState<
+    string | null
+  >(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -176,6 +215,103 @@ export default function EventDetailsPage({ params }: EventDetailsPageProps) {
     };
   }, [params]);
 
+  useEffect(() => {
+    if (!bookingResult || bookingResult.status !== "pending") {
+      return;
+    }
+
+    const intervalId = setInterval(() => {
+      setCountdownNowMs(Date.now());
+    }, 1000);
+
+    return () => {
+      clearInterval(intervalId);
+    };
+  }, [bookingResult]);
+
+  useEffect(() => {
+    setCountdownStatusSyncDoneFor(null);
+  }, [bookingResult?.id]);
+
+  const refreshBookingStatus = useCallback(async () => {
+    if (!bookingResult || !userId) {
+      return;
+    }
+
+    try {
+      const response = await fetch(
+        `/api/bookings?userId=${encodeURIComponent(userId)}`,
+        {
+          cache: "no-store",
+        },
+      );
+
+      if (!response.ok) {
+        return;
+      }
+
+      const payload = (await response.json()) as ListBookingsResponse;
+      const updatedBooking = payload.bookings.find(
+        (booking) => booking.id === bookingResult.id,
+      );
+
+      if (!updatedBooking) {
+        return;
+      }
+
+      setBookingResult((currentBooking) =>
+        currentBooking
+          ? {
+              ...currentBooking,
+              status: updatedBooking.status,
+              updatedAt: updatedBooking.updatedAt,
+            }
+          : currentBooking,
+      );
+    } catch {
+      // Ignore polling failures to keep the modal responsive.
+    }
+  }, [bookingResult, userId]);
+
+  useEffect(() => {
+    if (!bookingResult || !userId) {
+      return;
+    }
+
+    const intervalId = setInterval(() => {
+      void refreshBookingStatus();
+    }, 10000);
+
+    return () => {
+      clearInterval(intervalId);
+    };
+  }, [bookingResult, userId, refreshBookingStatus]);
+
+  useEffect(() => {
+    if (!bookingResult || bookingResult.status !== "pending") {
+      return;
+    }
+
+    const expiresAt =
+      new Date(bookingResult.createdAt).getTime() + BOOKING_PAYMENT_WINDOW_MS;
+
+    if (countdownNowMs < expiresAt) {
+      return;
+    }
+
+    if (countdownStatusSyncDoneFor === bookingResult.id) {
+      return;
+    }
+
+    setCountdownStatusSyncDoneFor(bookingResult.id);
+    void refreshBookingStatus();
+  }, [
+    bookingResult,
+    countdownNowMs,
+    countdownStatusSyncDoneFor,
+    refreshBookingStatus,
+  ]);
+
   const handleCreateBooking = async () => {
     if (!event || !userId) {
       return;
@@ -190,6 +326,7 @@ export default function EventDetailsPage({ params }: EventDetailsPageProps) {
 
     setBookingSubmitting(true);
     setBookingError(null);
+    setPaymentError(null);
 
     const bookingId = crypto.randomUUID();
 
@@ -221,6 +358,7 @@ export default function EventDetailsPage({ params }: EventDetailsPageProps) {
       }
 
       setBookingResult(payload as CreateBookingResponse);
+      setCountdownNowMs(Date.now());
       setVipSeats(0);
       setFirstRowSeats(0);
       setGaSeats(0);
@@ -244,6 +382,80 @@ export default function EventDetailsPage({ params }: EventDetailsPageProps) {
       );
     } finally {
       setBookingSubmitting(false);
+    }
+  };
+
+  const handlePayBooking = async (status: "success" | "failure") => {
+    if (!bookingResult || bookingResult.status !== "pending") {
+      return;
+    }
+
+    const expiresAt =
+      new Date(bookingResult.createdAt).getTime() + BOOKING_PAYMENT_WINDOW_MS;
+    if (Date.now() >= expiresAt) {
+      setPaymentError("This booking has expired.");
+      return;
+    }
+
+    setPaymentSubmitting(true);
+    setPaymentError(null);
+
+    try {
+      const response = await fetch("/api/payment", {
+        method: "POST",
+        headers: {
+          "content-type": "application/json",
+        },
+        body: JSON.stringify({
+          bookingId: bookingResult.id,
+          status,
+        }),
+      });
+
+      const payload = (await response.json().catch(() => null)) as unknown;
+
+      if (!response.ok) {
+        throw new Error(
+          getErrorMessage(
+            payload,
+            `Payment request failed with ${response.status}.`,
+          ),
+        );
+      }
+
+      const paymentPayload = payload as PayBookingResponse;
+      setBookingResult((currentBooking) =>
+        currentBooking
+          ? {
+              ...currentBooking,
+              status: paymentPayload.status,
+              updatedAt: paymentPayload.updatedAt,
+            }
+          : currentBooking,
+      );
+
+      if (event) {
+        const availabilityResponse = await fetch(
+          `/api/events/${event.id}/availability`,
+          {
+            cache: "no-store",
+          },
+        );
+
+        if (availabilityResponse.ok) {
+          const availabilityPayload =
+            (await availabilityResponse.json()) as EventAvailability;
+          setAvailability(availabilityPayload);
+        }
+      }
+    } catch (payError) {
+      setPaymentError(
+        payError instanceof Error
+          ? payError.message
+          : "Failed to update payment.",
+      );
+    } finally {
+      setPaymentSubmitting(false);
     }
   };
 
@@ -450,21 +662,60 @@ export default function EventDetailsPage({ params }: EventDetailsPageProps) {
             </article>
 
             {bookingResult ? (
-              <div className="fixed inset-0 z-50 flex items-center justify-center bg-zinc-900/45 px-4">
+              <div
+                className="fixed inset-0 z-50 flex items-center justify-center bg-zinc-900/45 px-4"
+                onClick={() => {
+                  setBookingResult(null);
+                  setPaymentError(null);
+                }}
+              >
                 <div
                   role="dialog"
                   aria-modal="true"
+                  onClick={(clickEvent) => {
+                    clickEvent.stopPropagation();
+                  }}
                   className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl"
                 >
                   <h3 className="text-xl font-semibold text-zinc-900">
                     Booking Created
                   </h3>
-                  <p className="mt-2 text-sm capitalize text-zinc-600">
-                    Status:{" "}
-                    <span className="font-semibold text-zinc-800">
+                  <div className="mt-3 flex items-center justify-between gap-3">
+                    <p className="text-xs font-semibold tracking-wide text-zinc-500 uppercase">
+                      Payment status
+                    </p>
+                    <span
+                      className={
+                        bookingResult.status === "success"
+                          ? "rounded-full bg-emerald-100 px-3 py-1 text-xs font-semibold uppercase text-emerald-700"
+                          : bookingResult.status === "failure"
+                            ? "rounded-full bg-rose-100 px-3 py-1 text-xs font-semibold uppercase text-rose-700"
+                            : "rounded-full bg-amber-100 px-3 py-1 text-xs font-semibold uppercase text-amber-700"
+                      }
+                    >
                       {bookingResult.status}
                     </span>
-                  </p>
+                  </div>
+
+                  {bookingResult.status === "pending" ? (
+                    <div className="mt-3 rounded-xl bg-zinc-100 px-4 py-3 text-sm text-zinc-700">
+                      <p className="text-xs font-semibold tracking-wide text-zinc-500 uppercase">
+                        Time left to pay
+                      </p>
+                      <p className="mt-1 text-2xl font-semibold tracking-tight text-zinc-900">
+                        {formatCountdown(
+                          Math.floor(
+                            Math.max(
+                              0,
+                              new Date(bookingResult.createdAt).getTime() +
+                                BOOKING_PAYMENT_WINDOW_MS -
+                                countdownNowMs,
+                            ) / 1000,
+                          ),
+                        )}
+                      </p>
+                    </div>
+                  ) : null}
 
                   <div className="mt-5 space-y-2 text-sm text-zinc-700">
                     <p className="flex items-center justify-between">
@@ -523,15 +774,59 @@ export default function EventDetailsPage({ params }: EventDetailsPageProps) {
                     </p>
                   </div>
 
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setBookingResult(null);
-                    }}
-                    className="mt-6 w-full rounded-xl bg-zinc-900 px-4 py-2 text-sm font-semibold text-white transition hover:bg-zinc-700"
-                  >
-                    Close
-                  </button>
+                  {paymentError ? (
+                    <p className="mt-4 rounded-xl bg-red-50 px-4 py-3 text-sm text-red-700">
+                      {paymentError}
+                    </p>
+                  ) : null}
+
+                  {bookingResult.status === "pending" ? (
+                    <div className="mt-6 grid grid-cols-2 gap-3">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          void handlePayBooking("failure");
+                        }}
+                        disabled={
+                          paymentSubmitting ||
+                          Date.now() >=
+                            new Date(bookingResult.createdAt).getTime() +
+                              BOOKING_PAYMENT_WINDOW_MS
+                        }
+                        className="rounded-xl bg-rose-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-rose-500 disabled:cursor-not-allowed disabled:opacity-60"
+                      >
+                        {paymentSubmitting ? "Processing..." : "Fail Payment"}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          void handlePayBooking("success");
+                        }}
+                        disabled={
+                          paymentSubmitting ||
+                          Date.now() >=
+                            new Date(bookingResult.createdAt).getTime() +
+                              BOOKING_PAYMENT_WINDOW_MS
+                        }
+                        className="rounded-xl bg-emerald-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-emerald-500 disabled:cursor-not-allowed disabled:opacity-60"
+                      >
+                        {paymentSubmitting
+                          ? "Processing..."
+                          : "Complete Payment"}
+                      </button>
+                    </div>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setBookingResult(null);
+                        setPaymentError(null);
+                      }}
+                      className="mt-6 w-full rounded-xl bg-zinc-900 px-4 py-2 text-sm font-semibold text-white transition hover:bg-zinc-700"
+                    >
+                      Close
+                    </button>
+                  )}
                 </div>
               </div>
             ) : null}

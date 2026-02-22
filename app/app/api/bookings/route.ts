@@ -35,3 +35,35 @@ export async function POST(request: Request) {
     return NextResponse.json({ message }, { status: 500 });
   }
 }
+
+export async function GET(request: Request) {
+  try {
+    const apiBaseUrl = getApiBaseUrl();
+    const { searchParams } = new URL(request.url);
+    const userId = searchParams.get("userId");
+
+    if (!userId) {
+      return NextResponse.json(
+        { message: "Missing userId query parameter." },
+        { status: 400 },
+      );
+    }
+
+    const response = await fetch(
+      `${apiBaseUrl}/bookings?userId=${encodeURIComponent(userId)}`,
+      {
+        cache: "no-store",
+      },
+    );
+
+    const responsePayload = (await response.json().catch(() => null)) as
+      | object
+      | null;
+
+    return NextResponse.json(responsePayload, { status: response.status });
+  } catch (error) {
+    const message =
+      error instanceof Error ? error.message : "Failed to fetch bookings.";
+    return NextResponse.json({ message }, { status: 500 });
+  }
+}
