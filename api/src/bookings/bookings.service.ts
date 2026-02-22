@@ -6,8 +6,10 @@ import {
   NotFoundException,
 } from "@nestjs/common";
 import { AppUserRepository } from "src/app-user/app-user.repository";
+import { BookingResponseDto } from "src/bookings/dto/booking-response.dto";
 import { CreateBookingDto } from "src/bookings/dto/create-booking.dto";
 import { CreateBookingResponseDto } from "src/bookings/dto/create-booking-response.dto";
+import { ListBookingsResponseDto } from "src/bookings/dto/list-bookings-response.dto";
 import { BookingsRepository } from "src/bookings/bookings.repository";
 import { EventsRepository } from "src/events/events.repository";
 
@@ -21,6 +23,18 @@ export class BookingsService {
     private readonly eventsRepository: EventsRepository,
     private readonly appUserRepository: AppUserRepository,
   ) {}
+
+  async findByUserId(userId: string): Promise<ListBookingsResponseDto> {
+    this.assertUuid(userId, "userId");
+
+    const rows = await this.bookingsRepository.findByUserExternalId(userId);
+    const bookings = rows.map((row) => this.mapRowToResponse(row));
+
+    return {
+      bookings,
+      found: bookings.length,
+    };
+  }
 
   async create(input: CreateBookingDto): Promise<CreateBookingResponseDto> {
     this.assertUuid(input.userId, "userId");
@@ -74,6 +88,31 @@ export class BookingsService {
 
     return {
       id: row.external_id,
+      status: row.status,
+      bookedSeats: {
+        vip: row.vip_seats,
+        firstRow: row.first_row_seats,
+        ga: row.ga_seats,
+        total: row.vip_seats + row.first_row_seats + row.ga_seats,
+      },
+      createdAt: row.created_at.toISOString(),
+      updatedAt: row.updated_at.toISOString(),
+    };
+  }
+
+  private mapRowToResponse(row: {
+    external_id: string;
+    event_external_id: string;
+    status: "pending" | "success" | "failure";
+    vip_seats: number;
+    first_row_seats: number;
+    ga_seats: number;
+    created_at: Date;
+    updated_at: Date;
+  }): BookingResponseDto {
+    return {
+      id: row.external_id,
+      eventId: row.event_external_id,
       status: row.status,
       bookedSeats: {
         vip: row.vip_seats,

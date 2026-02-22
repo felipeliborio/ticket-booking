@@ -1,18 +1,23 @@
 import { Test, TestingModule } from "@nestjs/testing";
 import { BookingsController } from "src/bookings/bookings.controller";
 import { CreateBookingResponseDto } from "src/bookings/dto/create-booking-response.dto";
+import { ListBookingsResponseDto } from "src/bookings/dto/list-bookings-response.dto";
 import { BookingsService } from "src/bookings/bookings.service";
 
 describe("BookingsController", () => {
   let controller: BookingsController;
   let bookingsService: {
     create: jest.Mock<Promise<CreateBookingResponseDto>>;
+    findByUserId: jest.Mock<Promise<ListBookingsResponseDto>>;
   };
 
   beforeEach(async () => {
     bookingsService = {
       create: jest.fn() as unknown as jest.Mock<
         Promise<CreateBookingResponseDto>
+      >,
+      findByUserId: jest.fn() as unknown as jest.Mock<
+        Promise<ListBookingsResponseDto>
       >,
     };
 
@@ -31,6 +36,22 @@ describe("BookingsController", () => {
 
   it("should be defined", () => {
     expect(controller).toBeDefined();
+  });
+
+  it("should list bookings by user id", async () => {
+    bookingsService.findByUserId.mockResolvedValue({
+      bookings: [],
+      found: 0,
+    });
+
+    const response = await controller.findByUser({
+      userId: "00000000-0000-4000-8000-000000000001",
+    });
+
+    expect(bookingsService.findByUserId).toHaveBeenCalledWith(
+      "00000000-0000-4000-8000-000000000001",
+    );
+    expect(response.found).toBe(0);
   });
 
   it("should create a pending booking", async () => {

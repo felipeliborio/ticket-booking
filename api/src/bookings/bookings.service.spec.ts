@@ -8,13 +8,14 @@ import { Test, TestingModule } from "@nestjs/testing";
 import { AppUserRepository } from "src/app-user/app-user.repository";
 import { BookingsRepository } from "src/bookings/bookings.repository";
 import { BookingsService } from "src/bookings/bookings.service";
-import { BookingInsertRow } from "src/bookings/bookings.types";
+import { BookingInsertRow, BookingListRow } from "src/bookings/bookings.types";
 import { EventsRepository } from "src/events/events.repository";
 
 describe("BookingsService", () => {
   let service: BookingsService;
   let bookingsRepository: {
     findByExternalId: jest.Mock<Promise<BookingInsertRow | undefined>>;
+    findByUserExternalId: jest.Mock<Promise<BookingListRow[]>>;
     insertPendingBooking: jest.Mock<Promise<BookingInsertRow | undefined>>;
   };
   let eventsRepository: {
@@ -37,6 +38,9 @@ describe("BookingsService", () => {
     bookingsRepository = {
       findByExternalId: jest.fn() as unknown as jest.Mock<
         Promise<BookingInsertRow | undefined>
+      >,
+      findByUserExternalId: jest.fn() as unknown as jest.Mock<
+        Promise<BookingListRow[]>
       >,
       insertPendingBooking: jest.fn() as unknown as jest.Mock<
         Promise<BookingInsertRow | undefined>
@@ -74,6 +78,47 @@ describe("BookingsService", () => {
     }).compile();
 
     service = module.get<BookingsService>(BookingsService);
+  });
+
+  it("should list bookings by user id", async () => {
+    bookingsRepository.findByUserExternalId.mockResolvedValue([
+      {
+        external_id: "9dbc5a98-dcda-4e49-9628-52fef26e6482",
+        event_external_id: "00000000-0000-4000-8000-0000000003e9",
+        status: "pending",
+        vip_seats: 2,
+        first_row_seats: 0,
+        ga_seats: 3,
+        created_at: new Date("2026-02-22T00:00:00.000Z"),
+        updated_at: new Date("2026-02-22T00:00:00.000Z"),
+      },
+    ]);
+
+    const response = await service.findByUserId(validPayload.userId);
+
+    expect(bookingsRepository.findByUserExternalId).toHaveBeenCalledWith(
+      validPayload.userId,
+    );
+    expect(response.found).toBe(1);
+    expect(response.bookings[0]).toEqual({
+      id: "9dbc5a98-dcda-4e49-9628-52fef26e6482",
+      eventId: "00000000-0000-4000-8000-0000000003e9",
+      status: "pending",
+      bookedSeats: {
+        vip: 2,
+        firstRow: 0,
+        ga: 3,
+        total: 5,
+      },
+      createdAt: "2026-02-22T00:00:00.000Z",
+      updatedAt: "2026-02-22T00:00:00.000Z",
+    });
+  });
+
+  it("should reject invalid user id on listing", async () => {
+    await expect(service.findByUserId("invalid")).rejects.toBeInstanceOf(
+      BadRequestException,
+    );
   });
 
   it("should create pending booking", async () => {

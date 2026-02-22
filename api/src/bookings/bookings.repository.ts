@@ -1,6 +1,6 @@
 import { Injectable } from "@nestjs/common";
 import { database } from "infra/database";
-import { BookingInsertRow } from "src/bookings/bookings.types";
+import { BookingInsertRow, BookingListRow } from "src/bookings/bookings.types";
 
 @Injectable()
 export class BookingsRepository {
@@ -25,6 +25,32 @@ export class BookingsRepository {
     });
 
     return queryResult.rows[0];
+  }
+
+  async findByUserExternalId(
+    userExternalId: string,
+  ): Promise<BookingListRow[]> {
+    const queryResult = await database.query<BookingListRow>({
+      text: `
+        SELECT
+          b.external_id,
+          e.external_id AS event_external_id,
+          b.status,
+          b.vip_seats,
+          b.first_row_seats,
+          b.ga_seats,
+          b.created_at,
+          b.updated_at
+        FROM booking b
+        INNER JOIN app_user u ON u.id = b.app_user_id
+        INNER JOIN event e ON e.id = b.event_id
+        WHERE u.external_id = $1
+        ORDER BY b.created_at DESC, b.id DESC;
+      `,
+      values: [userExternalId],
+    });
+
+    return queryResult.rows;
   }
 
   async insertPendingBooking(input: {

@@ -7,3 +7,7 @@ export interface BookingInsertRow {
   created_at: Date;
   updated_at: Date;
 }
+
+export interface BookingListRow extends BookingInsertRow {
+  event_external_id: string;
+}
