@@ -1,4 +1,4 @@
-import { getNewClient } from "../database.js";
+import { close, getNewClient } from "../database.js";
 import { loadEnvironment } from "./load-environment.js";
 import type { Seed } from "./types.js";
 import seedVenue from "./seeds/001_venue.js";
@@ -75,7 +75,8 @@ async function run(): Promise<void> {
     await client.query("ROLLBACK");
     throw error;
   } finally {
-    await client.end();
+    client.release();
+    await close();
   }
 }
 

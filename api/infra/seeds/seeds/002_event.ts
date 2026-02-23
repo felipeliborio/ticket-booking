@@ -1,4 +1,4 @@
-import type { Client } from "pg";
+import type { PoolClient } from "pg";
 import type { Seed } from "../types.js";
 
 function deterministicUuid(seed: number): string {
@@ -31,7 +31,7 @@ const events = Array.from({ length: 200 }, (_, index) => {
 
 const seed: Seed = {
   name: "002_event",
-  async run(client: Client): Promise<void> {
+  async run(client: PoolClient): Promise<void> {
     for (const event of events) {
       const venueResult = await client.query<{ id: string }>({
         text: `

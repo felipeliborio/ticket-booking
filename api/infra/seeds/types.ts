@@ -1,6 +1,6 @@
-import type { Client } from "pg";
+import type { PoolClient } from "pg";
 
 export interface Seed {
   name: string;
-  run: (client: Client) => Promise<void>;
+  run: (client: PoolClient) => Promise<void>;
 }
