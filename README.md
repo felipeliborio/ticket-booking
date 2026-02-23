@@ -1,6 +1,14 @@
 # ticket-booking
 This is a ticket booking system for an interview assignment.
 
+<img width="1284" height="831" alt="image" src="https://github.com/user-attachments/assets/7aba7d5b-b2fc-46b8-b38a-c9eed34c3faf" />
+<img width="1284" height="831" alt="image" src="https://github.com/user-attachments/assets/56a923c0-cccd-4d09-a8b8-941779d43e80" />
+<img width="1284" height="831" alt="image" src="https://github.com/user-attachments/assets/ac54311c-3d46-49eb-ae29-caa70923bd68" />
+<img width="1284" height="831" alt="image" src="https://github.com/user-attachments/assets/f42eaf3d-4a6d-484b-ba1d-7c024377cc5c" />
+<img width="1284" height="831" alt="image" src="https://github.com/user-attachments/assets/00213089-5132-45e4-b810-971f0f2d4577" />
+
+
+
 ## Running instructions
 
 ** From the root of the repository **
