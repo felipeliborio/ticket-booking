@@ -6,7 +6,7 @@ This is a ticket booking system for an interview assignment.
 ** From the root of the repository **
 
 Run the container described by /api/infra/compose.yaml
-docker compose -f api/infra/compose.yaml up
+- `docker compose -f api/infra/compose.yaml up`
 
 Using an lts/krypton instalation of node js run:
 - `npm --prefix api i`
