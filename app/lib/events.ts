@@ -103,7 +103,9 @@ export async function fetchEventAvailability(
   });
 
   if (!response.ok) {
-    throw new Error(`Event availability request failed with ${response.status}.`);
+    throw new Error(
+      `Event availability request failed with ${response.status}.`,
+    );
   }
 
   return (await response.json()) as EventAvailability;
