@@ -3,8 +3,9 @@ import { loadEnvironment } from "./load-environment.js";
 import type { Seed } from "./types.js";
 import seedVenue from "./seeds/001_venue.js";
 import seedEvent from "./seeds/002_event.js";
+import seedHugeEvent from "./seeds/003_huge_event.js";
 
-const availableSeeds: Seed[] = [seedVenue, seedEvent];
+const availableSeeds: Seed[] = [seedVenue, seedEvent, seedHugeEvent];
 
 function parseFileArg(argv: string[]): string | undefined {
   const fileFlagIndex = argv.findIndex((arg) => arg === "--file");
