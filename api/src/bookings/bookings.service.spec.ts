@@ -5,24 +5,20 @@ import {
   NotFoundException,
 } from "@nestjs/common";
 import { Test, TestingModule } from "@nestjs/testing";
-import { AppUserRepository } from "src/app-user/app-user.repository";
 import { BookingsRepository } from "src/bookings/bookings.repository";
 import { BookingsService } from "src/bookings/bookings.service";
-import { BookingInsertRow, BookingListRow } from "src/bookings/bookings.types";
-import { EventsRepository } from "src/events/events.repository";
+import {
+  BookingInsertAttemptRow,
+  BookingInsertRow,
+  BookingListRow,
+} from "src/bookings/bookings.types";
 
 describe("BookingsService", () => {
   let service: BookingsService;
   let bookingsRepository: {
     findByExternalId: jest.Mock<Promise<BookingInsertRow | undefined>>;
     findByUserExternalId: jest.Mock<Promise<BookingListRow[]>>;
-    insertPendingBooking: jest.Mock<Promise<BookingInsertRow | undefined>>;
-  };
-  let eventsRepository: {
-    findInternalIdByExternalId: jest.Mock<Promise<number | undefined>>;
-  };
-  let appUserRepository: {
-    upsertAndGetInternalId: jest.Mock<Promise<number | undefined>>;
+    insertPendingBooking: jest.Mock<Promise<BookingInsertAttemptRow>>;
   };
 
   const validPayload = {
@@ -43,19 +39,7 @@ describe("BookingsService", () => {
         Promise<BookingListRow[]>
       >,
       insertPendingBooking: jest.fn() as unknown as jest.Mock<
-        Promise<BookingInsertRow | undefined>
-      >,
-    };
-
-    eventsRepository = {
-      findInternalIdByExternalId: jest.fn() as unknown as jest.Mock<
-        Promise<number | undefined>
-      >,
-    };
-
-    appUserRepository = {
-      upsertAndGetInternalId: jest.fn() as unknown as jest.Mock<
-        Promise<number | undefined>
+        Promise<BookingInsertAttemptRow>
       >,
     };
 
@@ -65,14 +49,6 @@ describe("BookingsService", () => {
         {
           provide: BookingsRepository,
           useValue: bookingsRepository,
-        },
-        {
-          provide: EventsRepository,
-          useValue: eventsRepository,
-        },
-        {
-          provide: AppUserRepository,
-          useValue: appUserRepository,
         },
       ],
     }).compile();
@@ -132,9 +108,9 @@ describe("BookingsService", () => {
   });
 
   it("should create pending booking", async () => {
-    eventsRepository.findInternalIdByExternalId.mockResolvedValue(11);
-    appUserRepository.upsertAndGetInternalId.mockResolvedValue(7);
     bookingsRepository.insertPendingBooking.mockResolvedValue({
+      event_exists: true,
+      app_user_exists: true,
       external_id: validPayload.bookingId,
       status: "pending",
       vip_seats: 2,
@@ -148,8 +124,8 @@ describe("BookingsService", () => {
 
     expect(bookingsRepository.insertPendingBooking).toHaveBeenCalledWith({
       bookingExternalId: validPayload.bookingId,
-      eventInternalId: 11,
-      appUserInternalId: 7,
+      eventExternalId: validPayload.eventId,
+      appUserExternalId: validPayload.userId,
       vipSeats: 2,
       firstRowSeats: 0,
       gaSeats: 3,
@@ -169,9 +145,17 @@ describe("BookingsService", () => {
   });
 
   it("should return existing booking on conflict", async () => {
-    eventsRepository.findInternalIdByExternalId.mockResolvedValue(11);
-    appUserRepository.upsertAndGetInternalId.mockResolvedValue(7);
-    bookingsRepository.insertPendingBooking.mockResolvedValue(undefined);
+    bookingsRepository.insertPendingBooking.mockResolvedValue({
+      event_exists: true,
+      app_user_exists: true,
+      external_id: null,
+      status: null,
+      vip_seats: null,
+      first_row_seats: null,
+      ga_seats: null,
+      created_at: null,
+      updated_at: null,
+    });
     bookingsRepository.findByExternalId.mockResolvedValue({
       external_id: validPayload.bookingId,
       status: "success",
@@ -196,9 +180,17 @@ describe("BookingsService", () => {
   });
 
   it("should throw when there are not enough seats available", async () => {
-    eventsRepository.findInternalIdByExternalId.mockResolvedValue(11);
-    appUserRepository.upsertAndGetInternalId.mockResolvedValue(7);
-    bookingsRepository.insertPendingBooking.mockResolvedValue(undefined);
+    bookingsRepository.insertPendingBooking.mockResolvedValue({
+      event_exists: true,
+      app_user_exists: true,
+      external_id: null,
+      status: null,
+      vip_seats: null,
+      first_row_seats: null,
+      ga_seats: null,
+      created_at: null,
+      updated_at: null,
+    });
     bookingsRepository.findByExternalId.mockResolvedValue(undefined);
 
     await expect(service.create(validPayload)).rejects.toBeInstanceOf(
@@ -236,8 +228,17 @@ describe("BookingsService", () => {
   });
 
   it("should reject missing event", async () => {
-    eventsRepository.findInternalIdByExternalId.mockResolvedValue(undefined);
-    appUserRepository.upsertAndGetInternalId.mockResolvedValue(7);
+    bookingsRepository.insertPendingBooking.mockResolvedValue({
+      event_exists: false,
+      app_user_exists: true,
+      external_id: null,
+      status: null,
+      vip_seats: null,
+      first_row_seats: null,
+      ga_seats: null,
+      created_at: null,
+      updated_at: null,
+    });
 
     await expect(service.create(validPayload)).rejects.toBeInstanceOf(
       NotFoundException,
@@ -245,8 +246,17 @@ describe("BookingsService", () => {
   });
 
   it("should fail when user upsert returns no id", async () => {
-    eventsRepository.findInternalIdByExternalId.mockResolvedValue(11);
-    appUserRepository.upsertAndGetInternalId.mockResolvedValue(undefined);
+    bookingsRepository.insertPendingBooking.mockResolvedValue({
+      event_exists: true,
+      app_user_exists: false,
+      external_id: null,
+      status: null,
+      vip_seats: null,
+      first_row_seats: null,
+      ga_seats: null,
+      created_at: null,
+      updated_at: null,
+    });
 
     await expect(service.create(validPayload)).rejects.toBeInstanceOf(
       InternalServerErrorException,

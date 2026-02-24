@@ -1,6 +1,10 @@
 import { Injectable } from "@nestjs/common";
 import { database } from "infra/database";
-import { BookingInsertRow, BookingListRow } from "src/bookings/bookings.types";
+import {
+  BookingInsertAttemptRow,
+  BookingInsertRow,
+  BookingListRow,
+} from "src/bookings/bookings.types";
 
 @Injectable()
 export class BookingsRepository {
@@ -79,13 +83,13 @@ export class BookingsRepository {
 
   async insertPendingBooking(input: {
     bookingExternalId: string;
-    eventInternalId: number;
-    appUserInternalId: number;
+    eventExternalId: string;
+    appUserExternalId: string;
     vipSeats: number;
     firstRowSeats: number;
     gaSeats: number;
-  }): Promise<BookingInsertRow | undefined> {
-    const queryResult = await database.query<BookingInsertRow>({
+  }): Promise<BookingInsertAttemptRow> {
+    const queryResult = await database.query<BookingInsertAttemptRow>({
       text: `
         WITH event_lock AS (
           SELECT
@@ -95,8 +99,22 @@ export class BookingsRepository {
             v.ga_seats AS venue_ga_seats
           FROM event e
           INNER JOIN venue v ON v.id = e.venue_id
-          WHERE e.id = $2
+          WHERE e.external_id = $2
           FOR UPDATE
+        ),
+        inserted_app_user AS (
+          INSERT INTO app_user (external_id)
+          VALUES ($6)
+          ON CONFLICT (external_id) DO NOTHING
+          RETURNING id
+        ),
+        app_user_row AS (
+          SELECT id FROM inserted_app_user
+          UNION ALL
+          SELECT u.id
+          FROM app_user u
+          WHERE u.external_id = $6
+          LIMIT 1
         ),
         current_reserved AS (
           SELECT
@@ -127,13 +145,15 @@ export class BookingsRepository {
           )
           SELECT
             $1,
-            $2,
+            el.id,
             $3,
             $4,
             $5,
-            $6,
+            au.id,
             'pending'::booking_status
           FROM can_book
+          CROSS JOIN event_lock el
+          CROSS JOIN app_user_row au
           ON CONFLICT (external_id) DO NOTHING
           RETURNING
             id,
@@ -151,22 +171,37 @@ export class BookingsRepository {
           FROM inserted_booking
         )
         SELECT
-          external_id,
-          status,
-          vip_seats,
-          first_row_seats,
-          ga_seats,
-          created_at,
-          updated_at
-        FROM inserted_booking;
+          (SELECT EXISTS(SELECT 1 FROM event_lock)) AS event_exists,
+          (SELECT EXISTS(SELECT 1 FROM app_user_row)) AS app_user_exists,
+          ib.external_id,
+          ib.status,
+          ib.vip_seats,
+          ib.first_row_seats,
+          ib.ga_seats,
+          ib.created_at,
+          ib.updated_at
+        FROM inserted_booking ib
+        UNION ALL
+        SELECT
+          (SELECT EXISTS(SELECT 1 FROM event_lock)) AS event_exists,
+          (SELECT EXISTS(SELECT 1 FROM app_user_row)) AS app_user_exists,
+          null AS external_id,
+          null AS status,
+          null AS vip_seats,
+          null AS first_row_seats,
+          null AS ga_seats,
+          null AS created_at,
+          null AS updated_at
+        WHERE NOT EXISTS (SELECT 1 FROM inserted_booking)
+        LIMIT 1;
       `,
       values: [
         input.bookingExternalId,
-        input.eventInternalId,
+        input.eventExternalId,
         input.vipSeats,
         input.firstRowSeats,
         input.gaSeats,
-        input.appUserInternalId,
+        input.appUserExternalId,
       ],
     });
 
