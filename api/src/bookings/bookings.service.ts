@@ -5,24 +5,18 @@ import {
   InternalServerErrorException,
   NotFoundException,
 } from "@nestjs/common";
-import { AppUserRepository } from "src/app-user/app-user.repository";
 import { BookingResponseDto } from "src/bookings/dto/booking-response.dto";
 import { CreateBookingDto } from "src/bookings/dto/create-booking.dto";
 import { CreateBookingResponseDto } from "src/bookings/dto/create-booking-response.dto";
 import { ListBookingsResponseDto } from "src/bookings/dto/list-bookings-response.dto";
 import { BookingsRepository } from "src/bookings/bookings.repository";
-import { EventsRepository } from "src/events/events.repository";
 
 const UUID_REGEX =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 @Injectable()
 export class BookingsService {
-  constructor(
-    private readonly bookingsRepository: BookingsRepository,
-    private readonly eventsRepository: EventsRepository,
-    private readonly appUserRepository: AppUserRepository,
-  ) {}
+  constructor(private readonly bookingsRepository: BookingsRepository) {}
 
   async findByUserId(userId: string): Promise<ListBookingsResponseDto> {
     this.assertUuid(userId, "userId");
@@ -58,27 +52,41 @@ export class BookingsService {
       );
     }
 
-    const [eventInternalId, appUserInternalId] = await Promise.all([
-      this.eventsRepository.findInternalIdByExternalId(input.eventId),
-      this.appUserRepository.upsertAndGetInternalId(input.userId),
-    ]);
-
-    if (!eventInternalId) {
-      throw new NotFoundException("Event not found.");
-    }
-
-    if (!appUserInternalId) {
-      throw new InternalServerErrorException("Unable to resolve user.");
-    }
-
-    const insertedRow = await this.bookingsRepository.insertPendingBooking({
+    const insertAttempt = await this.bookingsRepository.insertPendingBooking({
       bookingExternalId: input.bookingId,
-      eventInternalId,
-      appUserInternalId,
+      eventExternalId: input.eventId,
+      appUserExternalId: input.userId,
       vipSeats,
       firstRowSeats,
       gaSeats,
     });
+
+    if (!insertAttempt.event_exists) {
+      throw new NotFoundException("Event not found.");
+    }
+
+    if (!insertAttempt.app_user_exists) {
+      throw new InternalServerErrorException("Unable to resolve user.");
+    }
+
+    const insertedRow =
+      insertAttempt.external_id &&
+      insertAttempt.status &&
+      insertAttempt.vip_seats !== null &&
+      insertAttempt.first_row_seats !== null &&
+      insertAttempt.ga_seats !== null &&
+      insertAttempt.created_at !== null &&
+      insertAttempt.updated_at !== null
+        ? {
+            external_id: insertAttempt.external_id,
+            status: insertAttempt.status,
+            vip_seats: insertAttempt.vip_seats,
+            first_row_seats: insertAttempt.first_row_seats,
+            ga_seats: insertAttempt.ga_seats,
+            created_at: insertAttempt.created_at,
+            updated_at: insertAttempt.updated_at,
+          }
+        : undefined;
 
     const row =
       insertedRow ??
