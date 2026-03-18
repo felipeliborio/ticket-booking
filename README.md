@@ -59,7 +59,6 @@ The credentials for the database are in /api/.env.development
 - Next.js
 - TypeScript
 - tailwindcss
-- TanStack Query
 
 ## Relevant Decisions
 ### The stack
